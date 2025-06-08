@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Priya - Your Hinglish AI Friend</title>
+    <!-- Add favicon to prevent 404 -->
+    <link rel="icon" href="data:,">
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -142,6 +144,12 @@
             margin-top: 5px;
             text-align: right;
         }
+
+        .error-message {
+            color: #d32f2f;
+            background-color: #ffebee;
+            border: 1px solid #ef9a9a;
+        }
     </style>
 </head>
 <body>
@@ -165,8 +173,6 @@
         const sendBtn = document.getElementById('send-btn');
 
         // Configuration
-        const OPENROUTER_API_KEY = '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';
-        const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
         const AI_NAME = "Priya";
         const AI_AVATAR = "💜";
         const USER_AVATAR = "👤";
@@ -198,13 +204,13 @@
             } catch (error) {
                 console.error('Error:', error);
                 removeTypingIndicator();
-                addMessage('ai', 'Oops! Kuch technical dikkt hai. Thoda baad mein try karo na? 😅');
+                addMessage('ai', 'Oops! Kuch technical dikkt hai. Thoda baad mein try karo na? 😅', true);
             }
         }
 
-        function addMessage(sender, text) {
+        function addMessage(sender, text, isError = false) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${sender}-message`;
+            messageDiv.className = `message ${sender}-message ${isError ? 'error-message' : ''}`;
             
             const avatar = sender === 'ai' ? AI_AVATAR : USER_AVATAR;
             messageDiv.innerHTML = `
@@ -245,7 +251,30 @@
         }
 
         async function getAIResponse(userMessage) {
-            const response = await fetch(OPENROUTER_API_URL, {
+            // Try using a free alternative if OpenRouter fails
+            try {
+                // First try OpenRouter
+                const openRouterResponse = await tryOpenRouter(userMessage);
+                if (openRouterResponse) return openRouterResponse;
+                
+                // Fallback to a local response if API fails
+                return getFallbackResponse(userMessage);
+            } catch (error) {
+                console.error("AI Error:", error);
+                return getFallbackResponse(userMessage);
+            }
+        }
+
+        async function tryOpenRouter(userMessage) {
+            // Comment out or remove the API key if it's not working
+            // const OPENROUTER_API_KEY = 'your-api-key-here';
+            
+            // For now, we'll skip OpenRouter since the key isn't working
+            return null;
+            
+            // This is how you would use it if you had a working key:
+            /*
+            const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -254,17 +283,11 @@
                     'X-Title': 'Hinglish AI Friend'
                 },
                 body: JSON.stringify({
-                    model: "anthropic/claude-3-haiku", // or "google/gemini-pro"
+                    model: "anthropic/claude-3-haiku",
                     messages: [
                         {
                             role: "system",
-                            content: `You are ${AI_NAME}, a friendly Indian AI assistant who speaks natural Hinglish (Hindi+English mix). Follow these rules:
-                            1. Respond in casual Hinglish (60% Hindi, 40% English)
-                            2. Use Indian phrases: "Arey waah!", "Achha!", "Thik hai na?", "Kya baat hai!"
-                            3. Be warm and expressive with emojis occasionally 😊
-                            4. Keep responses under 3 sentences usually
-                            5. Use Indian-English like "do one thing", "only na", "prepone"
-                            6. Address user as "tum" or "aap" based on context`
+                            content: getSystemPrompt()
                         },
                         {
                             role: "user",
@@ -277,7 +300,39 @@
             });
             
             const data = await response.json();
-            return data.choices[0]?.message?.content || "Sorry, samajh nahi aaya. Phir se bolo na?";
+            return data.choices[0]?.message?.content;
+            */
+        }
+
+        function getSystemPrompt() {
+            return `You are ${AI_NAME}, a friendly Indian AI assistant who speaks natural Hinglish (Hindi+English mix). Follow these rules:
+            1. Respond in casual Hinglish (60% Hindi, 40% English)
+            2. Use Indian phrases: "Arey waah!", "Achha!", "Thik hai na?", "Kya baat hai!"
+            3. Be warm and expressive with emojis occasionally 😊
+            4. Keep responses under 3 sentences usually
+            5. Use Indian-English like "do one thing", "only na", "prepone"
+            6. Address user as "tum" or "aap" based on context`;
+        }
+
+        function getFallbackResponse(userMessage) {
+            // Simple local responses when API fails
+            const responses = [
+                "Haan haan, sun rahi hoon! Lekin aaj thoda technical issue ho raha hai. Thoda wait karo?",
+                "Arey! Mera system thoda slow chal raha hai aaj. Tum phir se try karo thodi der baad?",
+                "Aaj kal AI bhi kabhi kabhi thak jati hai! 😅 Kuch aur poocho?",
+                "Mujhe lagta hai meri Hindi-English mixer thodi break ho gayi hai! Thoda sa time do theek hone ko?",
+                "Waah! Tumne to interesting baat puchi! Par abhi mera jawab dene ka system thoda stuck hai."
+            ];
+            
+            // Simple keyword matching for more relevant responses
+            if (userMessage.toLowerCase().includes('kaise ho')) {
+                return "Main thik hoon yaar! Bas thoda technical issue aa raha hai. Tum batao kaise ho?";
+            }
+            if (userMessage.toLowerCase().includes('aaj')) {
+                return "Aaj to mera system thoda slow hai! Par koi baat nahi, tum batao kya chal raha hai?";
+            }
+            
+            return responses[Math.floor(Math.random() * responses.length)];
         }
     </script>
 </body>
